@@ -167,6 +167,7 @@ Dans cette analyse, nous observons des requêtes et réponses DNS :
 
 Prenons la **trame 1103** comme exemple d'une requête DNS.
 
+
 ### **Informations générales**
 - **Protocole :** DNS via UDP.
 - **Source :** `fe80::f02b:a5e6:a096:ac2e` (client).  
