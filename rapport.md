@@ -176,8 +176,7 @@ Ces analyses mettent en lumière pourquoi TCP est utilisé pour des communicatio
 
 
 
-
-# Analyse UDP : Rapport d'analyse réseau
+# **Analyse UDP : Rapport d'analyse réseau**
 
 Ce rapport documente l'analyse d'une conversation UDP capturée avec Wireshark. La capture montre des échanges DNS, protocole utilisé pour la résolution de noms de domaine, via UDP sur le port 53.
 
@@ -185,127 +184,126 @@ Ce rapport documente l'analyse d'une conversation UDP capturée avec Wireshark. 
 
 ## **Introduction**
 
-Le **Domain Name System (DNS)** est un protocole utilisé pour traduire des noms de domaine en adresses IP ou pour récupérer d'autres informations liées à ces domaines. Il fonctionne généralement sur le port **53** en utilisant le protocole **UDP** pour des échanges rapides et légers.
+Le **Domain Name System (DNS)** est un protocole essentiel qui permet la traduction de noms de domaine (ex. : `www.google.com`) en adresses IP (ex. : `192.168.1.1`) ou la récupération d’autres informations associées à ces domaines. DNS utilise principalement **UDP sur le port 53**, mais peut basculer sur **TCP** en cas de besoins spécifiques (ex. : réponses volumineuses).
 
-Dans cette analyse, nous observons des requêtes et réponses DNS :
-- Requêtes pour des domaines comme `ops.gx.nvidia.com`, `wpad.home`, et `prod.otel.kaizen.nvidia.com`.
-- Réponses incluant différents types d'enregistrements : **CNAME**, **A**, **AAAA**, et **SOA**.
+Dans cette analyse, nous étudions plusieurs requêtes et réponses DNS, couvrant différents scénarios :  
+- Requêtes réussies avec enregistrements **A**, **AAAA**, **CNAME**, et **SOA**.  
+- Cas d’échecs avec le code de réponse **No such name**.  
 
 ---
 
 ## **1. Analyse d'une requête DNS**
 
-Prenons la **trame 1103** comme exemple d'une requête DNS.
+### **Exemple analysé : Trame 1103**
 
-![trame 1103](https://github.com/user-attachments/assets/e2b7932d-2066-4e84-8bc3-5b1179502ffc)
+![Trame 1103 - Requête DNS](https://github.com/user-attachments/assets/e2b7932d-2066-4e84-8bc3-5b1179502ffc)
 
+**Contexte de la trame :**  
+Une requête DNS de type **AAAA** est envoyée par le client pour obtenir l’adresse IPv6 associée au domaine `ops.gx.nvidia.com`.
 
-### **Informations générales**
-- **Protocole :** DNS via UDP.
-- **Source :** `fe80::f02b:a5e6:a096:ac2e` (client).  
+#### **Détails UDP**
+- **Source :** `fe80::f02b:a5e6:a096:ac2e` (adresse IPv6 du client).  
 - **Destination :** `fe80::46d4:54ff:fef6:ble3` (serveur DNS).  
-- **Info :** Requête DNS de type **AAAA** pour le domaine `ops.gx.nvidia.com`.
-
-### **Analyse des champs UDP**
-- **Port source :** Dynamique (choisi par le client).  
+- **Port source :** Dynamique (attribué par le client).  
 - **Port destination :** 53 (standard DNS).  
-- **Longueur :** 97 octets (taille totale du datagramme UDP).  
-- **Checksum :** Inclus pour vérifier l'intégrité des données.
+- **Longueur UDP :** 97 octets.  
+- **Checksum :** Calculé pour vérifier l’intégrité.
 
-### **Analyse des champs DNS**
-- **Transaction ID :** `0x4200` (identifiant unique pour associer cette requête à sa réponse).  
+#### **Détails DNS**
+- **Transaction ID :** `0x4200` (identifiant unique pour associer la requête à la réponse correspondante).  
 - **Flags DNS :**  
-  - `0x0100` : Indique une requête standard (pas une réponse).  
-  - La récursion n'est pas demandée.  
-- **Question DNS :**  
-  - Domaine demandé : `ops.gx.nvidia.com`.  
-  - Type d'enregistrement : **AAAA** (adresse IPv6).  
+  - `0x0100` : Requête standard, récursion non demandée.  
+- **Questions DNS :**  
+  - Domaine : `ops.gx.nvidia.com`.  
+  - Type d’enregistrement : **AAAA** (IPv6).
 
 ---
 
 ## **2. Analyse d'une réponse DNS**
 
-Prenons la **trame 1104** comme exemple d'une réponse DNS.
+### **Exemple analysé : Trame 1104**
 
-![trame 1104](https://github.com/user-attachments/assets/1ffd73ac-7003-4e25-b062-9d79ec40974e)
+![Trame 1104 - Réponse DNS](https://github.com/user-attachments/assets/1ffd73ac-7003-4e25-b062-9d79ec40974e)
 
+**Contexte de la trame :**  
+Le serveur DNS répond à la requête pour `ops.gx.nvidia.com` avec des enregistrements **CNAME**.
 
-### **Informations générales**
-- **Protocole :** DNS via UDP.
+#### **Détails UDP**
 - **Source :** `fe80::46d4:54ff:fef6:ble3` (serveur DNS).  
 - **Destination :** `fe80::f02b:a5e6:a096:ac2e` (client).  
-- **Info :** Réponse DNS pour `ops.gx.nvidia.com` avec des enregistrements **CNAME**.
+- **Port source :** 53.  
+- **Port destination :** Dynamique.  
+- **Longueur UDP :** 179 octets.  
 
-### **Analyse des champs UDP**
-- **Port source :** 53 (serveur DNS).  
-- **Port destination :** Dynamique (attribué par le client).  
-- **Longueur :** 179 octets (taille totale du datagramme UDP).  
-- **Checksum :** Inclus.
-
-### **Analyse des champs DNS**
-- **Transaction ID :** `0x4200` (correspondant à la requête dans la trame 1103).  
+#### **Détails DNS**
+- **Transaction ID :** `0x4200` (correspond à la requête précédente).  
 - **Flags DNS :**  
-  - `0x8180` : Indique qu’il s’agit d’une réponse.  
-  - La récursion est disponible.  
-- **Réponse DNS :**  
-  - **CNAME** : Le domaine `ops.gx.nvidia.com` est un alias vers `cs1137.wpc.ea55a.phicdn.net`.  
+  - `0x8180` : Réponse standard, récursion disponible.  
+- **Réponses DNS :**  
+  - **CNAME :** `ops.gx.nvidia.com` → alias de `cs1137.wpc.ea55a.phicdn.net`.  
   - **CNAME final :** `cs1137261584.wpc.phicdn.net`.  
 
 ---
 
 ## **3. Analyse des requêtes et réponses échouées**
 
-Les trames **1827 à 1832** montrent des requêtes DNS pour le domaine `wpad.home` qui échouent.
+### **Exemple analysé : Trames 1827 à 1832**
 
-![trames 1827 a 1832, dns echec](https://github.com/user-attachments/assets/ce506fee-86f7-4efd-9fcd-33a82cdbb0ce)
+![Trames 1827 à 1832 - DNS échoué](https://github.com/user-attachments/assets/ce506fee-86f7-4efd-9fcd-33a82cdbb0ce)
 
+**Contexte des trames :**  
+Le client tente de résoudre le domaine `wpad.home` via des requêtes DNS, mais reçoit des réponses indiquant qu’aucune correspondance n’existe.
 
-### **Résumé :**
-- **Requêtes :**
-  - Domaine demandé : `wpad.home`.  
-  - Types d'enregistrements : **A** (IPv4) et **AAAA** (IPv6).  
-- **Réponses :**
-  - Code de réponse DNS : **No such name**, indiquant que le serveur DNS n’a pas trouvé d’enregistrements correspondant à ce domaine.
+#### **Détails des requêtes**
+- Domaine demandé : `wpad.home`.  
+- Types d’enregistrement :  
+  - **A** (IPv4).  
+  - **AAAA** (IPv6).  
+
+#### **Détails des réponses**
+- **Code de réponse :** **No such name** (nom de domaine inexistant).  
+- **Interprétation :**  
+  Le serveur DNS confirme qu’il ne peut pas résoudre ce domaine.
 
 ---
 
 ## **4. Exemple de résolution réussie avec plusieurs adresses**
 
-Les trames **2909** (requête) et **2917** (réponse) illustrent la résolution du domaine `prod.otel.kaizen.nvidia.com`.
+### **Exemple analysé : Trames 2909 (requête) et 2917 (réponse)**
 
-![trames 2909 et 2017 reussis](https://github.com/user-attachments/assets/1fe2d0c6-7d2c-47c2-8f21-15df10104405)
+![Trames 2909 et 2917 - Résolution réussie](https://github.com/user-attachments/assets/1fe2d0c6-7d2c-47c2-8f21-15df10104405)
 
+**Contexte des trames :**  
+Une requête est envoyée pour le domaine `prod.otel.kaizen.nvidia.com`. La réponse contient plusieurs enregistrements.
 
-### **Réponse DNS :**
-- Domaine demandé : `prod.otel.kaizen.nvidia.com`.
-- Types d'enregistrements retournés :
+#### **Réponses DNS**
+- **Domaine :** `prod.otel.kaizen.nvidia.com`.  
+- **Types d’enregistrements retournés :**  
   - **A (IPv4)** :  
-    - 3 adresses IPv4 : `3.71.226.131`, `63.176.90.252`, et `63.176.236.234`.
+    - Adresses : `3.71.226.131`, `63.176.90.252`, et `63.176.236.234`.  
   - **SOA (Start of Authority)** :  
-    - Informations sur le serveur DNS principal pour le domaine.
+    - Informations sur le serveur DNS principal.
 
 ---
 
 ## **5. Relation entre DNS et UDP**
 
-### **Pourquoi UDP est utilisé pour DNS ?**
-- **Rapidité :** UDP est sans connexion, donc les requêtes/réponses sont envoyées rapidement sans établir une session préalable, contrairement à TCP.  
-- **Légereté :** Les échanges DNS sont généralement courts (une question, une réponse), donc les fonctionnalités de fiabilité de TCP ne sont pas nécessaires.  
-- **Cas particulier :** Si la réponse DNS dépasse la taille limite d’un datagramme UDP (512 octets dans certains cas), DNS peut basculer vers TCP.
+### **Pourquoi UDP est utilisé pour DNS ?**
+1. **Rapidité :** UDP est sans connexion, permettant des requêtes et réponses rapides sans la surcharge d’une session TCP.  
+2. **Efficacité :** La majorité des échanges DNS sont courts (une question, une réponse), ce qui ne nécessite pas les mécanismes de fiabilité de TCP.  
+3. **Fallback vers TCP :**  
+   Si une réponse dépasse la taille limite d’un datagramme UDP (512 octets dans certains cas), DNS utilise TCP pour garantir la livraison.
 
 ### **Avantages de l’utilisation d’UDP pour DNS :**
-- Permet des résolutions rapides pour une grande majorité des requêtes.  
-- Diminue la surcharge réseau par rapport à TCP.  
+- Optimise la rapidité pour les résolutions courantes.  
+- Réduit la surcharge réseau par rapport à TCP.  
 
 ---
 
 ## **Conclusion**
 
-Cette analyse met en évidence le fonctionnement typique d’un échange DNS sur UDP :
-- Une requête est envoyée par un client vers un serveur DNS sur le port **53**.
-- Le serveur DNS répond avec les informations demandées ou un message d'erreur si le domaine est introuvable.
-- Les différents types d’enregistrements DNS (CNAME, A, AAAA, SOA) montrent la diversité des données que DNS peut fournir.
+Cette analyse met en lumière le rôle fondamental de DNS dans la résolution de noms de domaine. L’utilisation d’**UDP sur le port 53** permet des échanges rapides et adaptés à la majorité des cas.
 
-En utilisant **UDP**, DNS privilégie la rapidité et la simplicité pour répondre à la majorité des besoins de résolution de noms.
+Cependant, le protocole DNS reste flexible, capable de basculer sur **TCP** pour gérer des cas exceptionnels tels que des réponses volumineuses. Les exemples analysés montrent également la diversité des enregistrements retournés (**A**, **AAAA**, **CNAME**, **SOA**), ainsi que la gestion des échecs dans les résolutions.
 
-[lien de la capture général ](https://github.com/mm-elmazani/Analyse-de-traces-perso-sur-la-couche-transport/blob/main/Screenshots%20UDP/conv%20g%C3%A9r%C3%A9nal.png)
+[lien vers la capture générale](https://github.com/mm-elmazani/Analyse-de-traces-perso-sur-la-couche-transport/blob/main/Screenshots%20UDP/conv%20g%C3%A9r%C3%A9nal.png)
