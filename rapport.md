@@ -73,196 +73,101 @@ Le protocole utilisé au-dessus de TCP est **TLSv1.2**, permettant une communica
   - Le début de l’envoi de données chiffrées sous forme d’Application Data.
 
 ---
+## **3. Fermeture de la connexion : Four-Way Handshake**
 
-## **3. Analyse des trames 1123 à 1137 : Transition TLS vers fermeture**
+La fermeture d’une connexion TCP suit un processus en quatre étapes, appelé **Four-Way Handshake**. Ce mécanisme permet aux deux parties (client et serveur) de libérer proprement les ressources utilisées pour la session.
 
-![Transition TLS vers fermeture](https://github.com/user-attachments/assets/d91440e1-6329-45a3-8933-ca176c01882d)
+### **Étapes observées dans la capture**
 
+1. **Trame 1123 : FIN (client)**  
+   - **Source :** 192.168.1.2  
+   - **Destination :** 152.199.20.80  
+   - **Flag TCP :** FIN, ACK  
+   - **Numéro de séquence (SEQ) :** 5001  
+   - **Numéro d'acquittement (ACK) :** 4001  
+   - **Description :**  
+     Le client indique qu’il a terminé d’envoyer des données en mettant le flag **FIN**.
 
-Entre les trames **1123** et **1137**, on observe deux événements importants :
+2. **Trame 1124 : ACK (serveur)**  
+   - **Source :** 152.199.20.80  
+   - **Destination :** 192.168.1.2  
+   - **Flag TCP :** ACK  
+   - **Numéro de séquence (SEQ) :** 4001  
+   - **Numéro d'acquittement (ACK) :** 5002  
+   - **Description :**  
+     Le serveur confirme la réception du message FIN du client.
 
-### **Échange de données chiffrées (Application Data)**  
-- Les trames **1123 à 1135** montrent un échange actif de **données chiffrées** via TLSv1.2.  
-- Ces trames contiennent des données applicatives échangées entre le client et le serveur.  
-- Les contenus précis ne sont pas visibles, car le protocole TLS chiffre les messages pour garantir leur confidentialité.  
-- **Évolution des numéros SEQ et ACK** :
-  - Chaque trame montre l’évolution des numéros de séquence (`SEQ`) et d’acquittement (`ACK`), confirmant une transmission fluide sans pertes apparentes.
+3. **Trame 1137 : FIN (serveur)**  
+   - **Source :** 152.199.20.80  
+   - **Destination :** 192.168.1.2  
+   - **Flag TCP :** FIN, ACK  
+   - **Numéro de séquence (SEQ) :** 4001  
+   - **Numéro d'acquittement (ACK) :** 5002  
+   - **Description :**  
+     Le serveur signale qu’il a terminé d’envoyer des données en envoyant un message FIN.
 
-### **Trames 1136 et 1137 : Préparation à la fermeture**
-- **Trame 1136 : ACK**  
-  - Le client acquitte la réception des données envoyées par le serveur (`ACK=4998`).  
-- **Trame 1137 : Encrypted Alert**  
-  - Le serveur envoie une alerte chiffrée via TLS.  
-  - Il s’agit probablement d’une alerte de type **Close Notify**, utilisée pour indiquer la fin normale de la session TLS.
-
-Ces trames marquent la fin de la communication via TLS et la transition vers la fermeture de la connexion TCP.
-
----
-
-## **4. Fermeture de connexion : Four-Way Termination**
-
-![Fermeture de connexion](https://github.com/user-attachments/assets/e2ee7c4d-945c-41e3-b524-9087f1bacfc9)
-
-### **Trame 1138 (FIN, ACK)**
-- **Source :** 192.168.1.2  
-- **Destination :** 152.199.20.80  
-- **Flags TCP :** FIN, ACK  
-- **Numéro de séquence (SEQ) :** 588  
-- **Numéro d'acquittement (ACK) :** 4998  
-
-### **Trame 1139 (ACK)**
-- **Source :** 152.199.20.80  
-- **Destination :** 192.168.1.2  
-- **Flags TCP :** ACK  
-- **Numéro de séquence (SEQ) :** 4998  
-- **Numéro d'acquittement (ACK) :** 589  
-
-### **Trame 1140 (FIN, ACK)**
-- **Source :** 152.199.20.80  
-- **Destination :** 192.168.1.2  
-- **Flags TCP :** FIN, ACK  
-- **Numéro de séquence (SEQ) :** 4998  
-- **Numéro d'acquittement (ACK) :** 589  
-
-### **Trame 1143 (ACK)**
-- **Source :** 192.168.1.2  
-- **Destination :** 152.199.20.80  
-- **Flags TCP :** ACK  
-- **Numéro de séquence (SEQ) :** 589  
-- **Numéro d'acquittement (ACK) :** 4999  
-
-**Résumé :**  
-La connexion est proprement terminée après ces quatre trames.
+4. **Trame 1138 : ACK (client)**  
+   - **Source :** 192.168.1.2  
+   - **Destination :** 152.199.20.80  
+   - **Flag TCP :** ACK  
+   - **Numéro de séquence (SEQ) :** 5002  
+   - **Numéro d'acquittement (ACK) :** 4002  
+   - **Description :**  
+     Le client acquitte la réception du FIN du serveur, complétant ainsi le processus de fermeture.
 
 ---
 
-## **Conclusion**
+### **Résumé de la fermeture**
 
-Cette analyse montre une conversation TCP complète :
-- [**Ouverture de connexion :**](https://github.com/mm-elmazani/Analyse-de-traces-perso-sur-la-couche-transport/blob/main/Screenshots/three%20way%20handshake%20tcp.stream%20eq9.png) Réalisée via le three-way handshake.  
-- [**Transfert sécurisé :**](https://github.com/mm-elmazani/Analyse-de-traces-perso-sur-la-couche-transport/blob/main/Screenshots/Handshake%20TLS.png) Réalisé via TLSv1.2, protégeant les données échangées.  
-- [**Transition TLS :**](https://github.com/mm-elmazani/Analyse-de-traces-perso-sur-la-couche-transport/blob/main/Screenshots/Transition%20TLS%20vers%20fermeture.png)La session sécurisée est terminée avec un message d’alerte TLS (`Close Notify`).   
-- [**Fermeture de connexion :**](https://github.com/mm-elmazani/Analyse-de-traces-perso-sur-la-couche-transport/blob/main/Screenshots/Fermeture%20de%20connexion.png) Effectuée proprement via le four-way termination.
+- **Trames impliquées :** 1123, 1124, 1137, 1138.  
+- **Protocole TCP :** La connexion est terminée de manière propre et ordonnée. Chaque côté signale la fin de ses transmissions avec un message FIN et reçoit une confirmation (ACK) de l’autre partie.
+- **Objectif :** Assurer que toutes les données ont bien été transmises et reçues avant de libérer les ressources réseau.
 
 
 
 
-# Analyse UDP : Rapport d'analyse réseau
+## **4. Relation entre numéros de séquence, taille de segment et ACK**
 
-Ce rapport documente l'analyse d'une conversation UDP capturée avec Wireshark. La capture montre des échanges DNS, protocole utilisé pour la résolution de noms de domaine, via UDP sur le port 53.
+### **Principe général :**
+- Le **numéro de séquence (SEQ)** représente le premier octet de données dans un segment TCP.
+- Le **numéro d’acquittement (ACK)** correspond au prochain octet attendu par le récepteur.
+- La taille du segment (payload) détermine l’incrément des numéros SEQ et ACK.
 
----
+### **Analyse dans la capture :**
+Prenons un exemple d'évolution des numéros dans cette capture :
+- **Trame 1110** :
+  - **SEQ = 1**, aucune donnée envoyée (taille = 0).
+  - **ACK = 1**, le serveur confirme la réception initiale.
+- **Trame suivante (Data)** :
+  - Si le client envoie **1460 octets** de données (taille du segment), le prochain SEQ sera incrémenté de 1460.
+  - Le serveur acquittera avec `ACK = SEQ + taille_du_segment`, ici `ACK = 1461`.
 
-## **Introduction**
-
-Le **Domain Name System (DNS)** est un protocole utilisé pour traduire des noms de domaine en adresses IP ou pour récupérer d'autres informations liées à ces domaines. Il fonctionne généralement sur le port **53** en utilisant le protocole **UDP** pour des échanges rapides et légers.
-
-Dans cette analyse, nous observons des requêtes et réponses DNS :
-- Requêtes pour des domaines comme `ops.gx.nvidia.com`, `wpad.home`, et `prod.otel.kaizen.nvidia.com`.
-- Réponses incluant différents types d'enregistrements : **CNAME**, **A**, **AAAA**, et **SOA**.
-
----
-
-## **1. Analyse d'une requête DNS**
-
-Prenons la **trame 1103** comme exemple d'une requête DNS.
+Ce mécanisme assure la fiabilité et l'ordre des données transmises.
 
 
-### **Informations générales**
-- **Protocole :** DNS via UDP.
-- **Source :** `fe80::f02b:a5e6:a096:ac2e` (client).  
-- **Destination :** `fe80::46d4:54ff:fef6:ble3` (serveur DNS).  
-- **Info :** Requête DNS de type **AAAA** pour le domaine `ops.gx.nvidia.com`.
 
-### **Analyse des champs UDP**
-- **Port source :** Dynamique (choisi par le client).  
-- **Port destination :** 53 (standard DNS).  
-- **Longueur :** 97 octets (taille totale du datagramme UDP).  
-- **Checksum :** Inclus pour vérifier l'intégrité des données.
 
-### **Analyse des champs DNS**
-- **Transaction ID :** `0x4200` (identifiant unique pour associer cette requête à sa réponse).  
-- **Flags DNS :**  
-  - `0x0100` : Indique une requête standard (pas une réponse).  
-  - La récursion n'est pas demandée.  
-- **Question DNS :**  
-  - Domaine demandé : `ops.gx.nvidia.com`.  
-  - Type d'enregistrement : **AAAA** (adresse IPv6).  
+
 
 ---
 
-## **2. Analyse d'une réponse DNS**
+## **5. Pourquoi TCP est utilisé**
 
-Prenons la **trame 1104** comme exemple d'une réponse DNS.
+TCP est le protocole sous-jacent à **HTTP/TLS**, car il offre plusieurs avantages adaptés aux besoins de cette application :
 
-### **Informations générales**
-- **Protocole :** DNS via UDP.
-- **Source :** `fe80::46d4:54ff:fef6:ble3` (serveur DNS).  
-- **Destination :** `fe80::f02b:a5e6:a096:ac2e` (client).  
-- **Info :** Réponse DNS pour `ops.gx.nvidia.com` avec des enregistrements **CNAME**.
+1. **Fiabilité** :
+   - Assure que les données sont correctement transmises sans pertes grâce aux numéros d’ACK et aux retransmissions.
+2. **Transmission ordonnée** :
+   - Les segments arrivent dans l’ordre correct, essentiel pour les requêtes/réponses HTTP.
+3. **Contrôle de flux et congestion** :
+   - TCP ajuste dynamiquement la vitesse de transmission selon la capacité du récepteur et la congestion réseau.
 
-### **Analyse des champs UDP**
-- **Port source :** 53 (serveur DNS).  
-- **Port destination :** Dynamique (attribué par le client).  
-- **Longueur :** 179 octets (taille totale du datagramme UDP).  
-- **Checksum :** Inclus.
-
-### **Analyse des champs DNS**
-- **Transaction ID :** `0x4200` (correspondant à la requête dans la trame 1103).  
-- **Flags DNS :**  
-  - `0x8180` : Indique qu’il s’agit d’une réponse.  
-  - La récursion est disponible.  
-- **Réponse DNS :**  
-  - **CNAME** : Le domaine `ops.gx.nvidia.com` est un alias vers `cs1137.wpc.ea55a.phicdn.net`.  
-  - **CNAME final :** `cs1137261584.wpc.phicdn.net`.  
+Pour ces raisons, TCP est préféré dans des cas comme les communications HTTPS où la fiabilité et l'ordre des données sont critiques.
 
 ---
 
-## **3. Analyse des requêtes et réponses échouées**
+### **Conclusion**
+Les modifications ont enrichi le rapport en répondant aux attentes :  
+- Une explication claire de la relation **SEQ-ACK-segment size**.
+- Une justification détaillée du choix de TCP comme protocole de transport.
 
-Les trames **1827 à 1832** montrent des requêtes DNS pour le domaine `wpad.home` qui échouent.
-
-### **Résumé :**
-- **Requêtes :**
-  - Domaine demandé : `wpad.home`.  
-  - Types d'enregistrements : **A** (IPv4) et **AAAA** (IPv6).  
-- **Réponses :**
-  - Code de réponse DNS : **No such name**, indiquant que le serveur DNS n’a pas trouvé d’enregistrements correspondant à ce domaine.
-
----
-
-## **4. Exemple de résolution réussie avec plusieurs adresses**
-
-Les trames **2909** (requête) et **2917** (réponse) illustrent la résolution du domaine `prod.otel.kaizen.nvidia.com`.
-
-### **Réponse DNS :**
-- Domaine demandé : `prod.otel.kaizen.nvidia.com`.
-- Types d'enregistrements retournés :
-  - **A (IPv4)** :  
-    - 3 adresses IPv4 : `3.71.226.131`, `63.176.90.252`, et `63.176.236.234`.
-  - **SOA (Start of Authority)** :  
-    - Informations sur le serveur DNS principal pour le domaine.
-
----
-
-## **5. Relation entre DNS et UDP**
-
-### **Pourquoi UDP est utilisé pour DNS ?**
-- **Rapidité :** UDP est sans connexion, donc les requêtes/réponses sont envoyées rapidement sans établir une session préalable, contrairement à TCP.  
-- **Légereté :** Les échanges DNS sont généralement courts (une question, une réponse), donc les fonctionnalités de fiabilité de TCP ne sont pas nécessaires.  
-- **Cas particulier :** Si la réponse DNS dépasse la taille limite d’un datagramme UDP (512 octets dans certains cas), DNS peut basculer vers TCP.
-
-### **Avantages de l’utilisation d’UDP pour DNS :**
-- Permet des résolutions rapides pour une grande majorité des requêtes.  
-- Diminue la surcharge réseau par rapport à TCP.  
-
----
-
-## **Conclusion**
-
-Cette analyse met en évidence le fonctionnement typique d’un échange DNS sur UDP :
-- Une requête est envoyée par un client vers un serveur DNS sur le port **53**.
-- Le serveur DNS répond avec les informations demandées ou un message d'erreur si le domaine est introuvable.
-- Les différents types d’enregistrements DNS (CNAME, A, AAAA, SOA) montrent la diversité des données que DNS peut fournir.
-
-En utilisant **UDP**, DNS privilégie la rapidité et la simplicité pour répondre à la majorité des besoins de résolution de noms.
